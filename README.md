@@ -1,14 +1,13 @@
 
 ![1](https://img.shields.io/badge/%5E7.29-Laravel-orange?style=flat-square&logo=laravel)
 ![2](https://img.shields.io/badge/Licence-MIT-yellow?style=flat-square)
-![3](https://img.shields.io/badge/1.59.0-Visual%20Studio%20Code-orange?style=flat-square&logo=visual-studio-code)
+![3](https://img.shields.io/badge/1.59.0-Visual%20Studio%20Code-purple?style=flat-square&logo=visual-studio-code)
 ![4](https://img.shields.io/badge/7.4.19-PHP-informational?style=flat-square&logo=php)
 ![5](https://img.shields.io/badge/5.7.24-MySQL-lightblue?style=flat-square&logo=mysql)
 
-## Avaliação Simplificada
+## Documentação
 
-Projeto baseado na avaliação simplificada de uma empresa.
-
+Documentação [aqui](https://github.com/ramonlima08/teste_simplificado/wiki)
 
 ## Projeto
 
@@ -27,7 +26,7 @@ Desenvolver uma API para transferencia de valores entre usuários da plataforma.
 - Verificação do Saldo atual
 - Envio de notificação (sms ou e-mail)
 
-## Instalação
+## Instalação 
 
 Baiar o projeto
 
@@ -92,6 +91,6 @@ Roda servidor local na porta 8000 (caso não esteja rodando laragon)
 ```bash
 $ php artisan serve
 ```
-## Usabilidade 📝
+## Usabilidade 
 
-Não foi desenvolvido a interface visual, para testes recomenda-se utilizar o programa [Postman] (https://www.postman.com/)
+Não foi desenvolvido a interface visual, para testes recomenda-se utilizar o programa Postman https://www.postman.com/

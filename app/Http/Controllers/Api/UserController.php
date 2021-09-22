@@ -37,8 +37,10 @@ class UserController extends Controller
             'name.required' => 'O nome é obrigatório',
             'email.required' => 'O e-mail é obrigatório',
             'email.unique' => 'Email ja registrado',
+            'password.required' => 'A senha é obrigatória',
             'cpf_cnpj.required' => 'CPF/CNPJ é obrigatório',
             'cpf_cnpj.unique' => 'CPF/CNPJ ja registrado',
+            'user_type.required' => 'o Tipo de Usuário é obrigatório',
         ];
 
         $validator = \Validator::make($request->all(), [
@@ -46,8 +48,9 @@ class UserController extends Controller
             'email' => 'required|unique:users,email',
             'password' => 'required',
             'cpf_cnpj' => 'required|unique:users,cpf_cnpj',
-           
+            'user_type'=> 'required'
         ], $messages);
+        
         //executando validação de campos
         if ($validator->fails()) {
             $responseArr['message'] = $validator->errors();
