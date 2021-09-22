@@ -3,11 +3,8 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-
-
 Route::post('/user/register','Api\UserController@store')->name('user.store');
 Route::post('/auth/login', 'Api\AuthController@login')->name('login');
-
 
 //jwt (json web token)
 Route::group(['middleware' => ['apiJwt']], function(){
@@ -22,5 +19,7 @@ Route::group(['middleware' => ['apiJwt']], function(){
     
     Route::get('/wallet/balance','Api\WalletController@balance')->name('wallet.balance');
     Route::post('/wallet/update','Api\WalletController@update')->name('wallet.update');
+
+    Route::post('/notify/send','Api\NotifyController@balance')->name('notify.send');
 
 });
