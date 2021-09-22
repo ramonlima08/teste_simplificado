@@ -13,18 +13,7 @@ use \Illuminate\Http\Response;
 
 class UserController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function index()
-    {
-        $users = User::all();
-
-        return response()->json($users);
-    }
-
+    
     /**
      * Store a newly created resource in storage.
      *
@@ -94,7 +83,12 @@ class UserController extends Controller
         } catch (\Throwable $e) {
             
             report($e);
-            $responseArr = ['status'=> 0, 'message'=>"houve um erro na execução do processo", 'number'=>$e->errorInfo[1]];
+            $number = 0;
+            if (property_exists($e, 'errorInfo')) {
+                $number = $e->errorInfo[1];
+            }
+            
+            $responseArr = ['status'=> 0, 'message'=>"houve um erro na execução do processo", 'number'=>$number];
             return response()->json($responseArr, Response::HTTP_BAD_REQUEST);
          
         }       

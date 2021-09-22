@@ -20,6 +20,6 @@ Route::group(['middleware' => ['apiJwt']], function(){
     Route::get('/wallet/balance','Api\WalletController@balance')->name('wallet.balance');
     Route::post('/wallet/update','Api\WalletController@update')->name('wallet.update');
 
-    Route::post('/notify/send','Api\NotifyController@balance')->name('notify.send');
+    Route::post('/notify/send','Api\NotifyController@send')->name('notify.send');
 
 });

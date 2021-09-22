@@ -15,8 +15,7 @@ class TransactionController extends Controller
     private $error=false;
     private $errorMessage="";
     
-    public function history()
-    {
+    public function history(){
         
         $transactions = TransactionHistory::where(function ($query) {
             $user = auth('api')->user();
@@ -29,17 +28,16 @@ class TransactionController extends Controller
     }
 
 
-    public function store(Request $request)
-    {
+    public function store(Request $request){
         $user = auth('api')->user();
 
         //se for lojista não prossegue
         if($user->user_type == 2){
-            return response()->json(['status'=>0, 'message'=>'Lojista não tem permissão para transferir']);
+            return response()->json(['status'=>0, 'message'=>'Lojista não tem permissão para transferir'], Response::HTTP_BAD_REQUEST);
         }
 
         if($user->id == $request->user_id_to){
-            return response()->json(['status'=>0, 'message'=>'Você não pode enviar dinheiro para você mesmo']);
+            return response()->json(['status'=>0, 'message'=>'Você não pode enviar dinheiro para você mesmo'], Response::HTTP_BAD_REQUEST);
         }
 
         $messages  = [
@@ -74,12 +72,13 @@ class TransactionController extends Controller
             $transaction = $this->startTransaction($user, $transactionData);
 
             if($this->getError()){
-                return response()->json(['status'=>0, 'message'=> $this->getErrorMessage()]);
+                return response()->json(['status'=>0, 'message'=> $this->getErrorMessage()], Response::HTTP_BAD_REQUEST);
             }
 
-            $responseArr['message'] = "Transferencia realizada com sucesso!";
+            //RESPONDE O ID DA TRANSAÇÃO PARA A VIEW CHAMAR O MÉTODO DE ENVIO DE E-MAIL
+            $responseArr['message'] = "Transferência realizada com sucesso!";
             $responseArr['status'] = 1;
-            //$responseArr['data'] = ['transaction_id' => $transaction->id];
+            $responseArr['data'] = ['transaction_id' => $transaction->id];
             return response()->json($responseArr);
 
         } catch (\Throwable $e) {
@@ -96,20 +95,15 @@ class TransactionController extends Controller
         }
 
     }
+    
 
-    public function show($id)
-    {
-        //
-    }
+    public function rollback(Request $request){
+        
+        $id = $request->transaction_id;
+        if(empty($id) || $id <= 0){
+            return response()->json(['status'=>0, 'message'=>'Favor informar o Id da Transação'], Response::HTTP_BAD_REQUEST);
+        }
 
-    public function update(Request $request, $id)
-    {
-        //
-    }
-
-    public function rollback(Request $request)
-    {
-        $id = $request->id;
         $transaction = TransactionHistory::find($id);
         $data = $transaction->toArray();
         unset($data['user_id_to'], $data['user_id_from']);
@@ -118,43 +112,74 @@ class TransactionController extends Controller
 
         //se for lojista não prossegue
         if($user->user_type == 2){
-            return response()->json(['status'=>0, 'message'=>'Lojista não tem permissão para estornar transferencia']);
+            return response()->json(['status'=>0, 'message'=>'Lojista não tem permissão para estornar Transferência'], Response::HTTP_BAD_REQUEST);
+        }
+
+        //verifica se a transação está finalizada
+        if($transaction->status == 0){
+            $responseArr['message'] = "Atenção, a Transferência informada não foi concretizada, não foi possivel prosseguir com sua solicitação";
+            $responseArr['status'] = 0;
+            return response()->json($responseArr, Response::HTTP_BAD_REQUEST);
         }
 
         //verifica se esta fazendo rollback de transação já estornada
         if($transaction->status == 2){
-            $responseArr['message'] = "Atenção, essa trnasferencia já foi estornada anteriormente, não foi possivel prosseguir com sua solicitação";
+            $responseArr['message'] = "Atenção, essa Transferência já foi estornada anteriormente, não foi possivel prosseguir com sua solicitação";
             $responseArr['status'] = 0;
+            return response()->json($responseArr, Response::HTTP_BAD_REQUEST);
+        }
+
+        try{
+            //quem vai enviar, foi quem recebeu a transação
+            $user = User::find($transaction->user_id_to);
+
+            //quem vai receber, foi quem enviaou a transação
+            $data['user_id_to'] = $transaction->user_id_from;
+            $data['user_id_from'] = $transaction->user_id_to;
+            $data['is_rollback'] = 1;
+            $data['rollback_transaction_id'] = $transaction->id;
+
+            $this->startTransaction($user, $data);
+
+            $transaction->update(['status'=>2]);
+
+            $responseArr['message'] = "Transferência estornada com sucesso!";
+            $responseArr['status'] = 1;
+            $responseArr['data'] = ['transaction_id' => $transaction->id];
             return response()->json($responseArr);
+
+        } catch (\Exception $ex) {
+            report($e);
+            $number = 0;
+            if (property_exists($e, 'errorInfo')) {
+                $number = $e->errorInfo[1];
+            }
+            
+            $responseArr = ['status'=> 0, 'message'=>"houve um erro na execução do processo", 'number'=>$number];
+            return response()->json($responseArr, Response::HTTP_BAD_REQUEST);
         }
         
-        //quem vai enviar, foi quem recebeu a transação
-        $user = User::find($transaction->user_id_to);
-
-        //quem vai receber, foi quem enviaou a transação
-        $data['user_id_to'] = $transaction->user_id_from;
-        $data['user_id_from'] = $transaction->user_id_to;
-        $data['is_rollback'] = 1;
-        $data['rollback_transaction_id'] = $transaction->id;
-
-        $this->startTransaction($user, $data);
-
-        $transaction->update(['status'=>2]);
-
-        $responseArr['message'] = "Transferencia desfeita com sucesso!";
-        $responseArr['status'] = 1;
-        $responseArr['data'] = ['transaction_id' => $transaction->id];
-        return response()->json($responseArr);
     }
 
     public function checkExternalAuthorization(){
-        //URL para verificar Autorização
-        $response = Http::get('https://run.mocky.io/v3/8fafdd68-a090-496f-8c9a-3442cf30dae6');
-        $jsonReturn = $response->json();
-        if($jsonReturn['message'] == "Autorizado"){
-            return true;
+        try{
+            //URL para verificar Autorização
+            $response = Http::get('https://run.mocky.io/v3/8fafdd68-a090-496f-8c9a-3442cf30dae6');
+            $jsonReturn = $response->json();
+            if($jsonReturn['message'] == "Autorizado"){
+                return true;
+            }
+            return false;
+        } catch (\Exception $ex) {
+            report($e);
+            $number = 0;
+            if (property_exists($e, 'errorInfo')) {
+                $number = $e->errorInfo[1];
+            }
+            
+            $this->setError('Um erro inesperado interrompeu o processo  (ExternalAuthorization: '.$number.')');
+            return false;
         }
-        return false;
     }
 
     /**
@@ -165,16 +190,12 @@ class TransactionController extends Controller
         if($transactionData['amount'] <= 0){
             $this->setError('Valor inválido');
             return false;
-            //return response()->json(['status'=>0, 'message'=>'Valor inválido']);
         }
 
         //VERIFICAÇÃO DE SALDO
         if(! Wallet::checkBalance($user, $transactionData['amount']) ){
             $this->setError('Não foi possivel completar sua solicitação, você não tem saldo suficiente para completar essa transação');
             return false;
-            /*$responseArr['message'] = 'Não foi possivel completar sua solicitação, você não tem saldo suficiente para completar essa transação';
-            $responseArr['status'] = 0;
-            return response()->json($responseArr);*/
         }
 
         //REGISTRA A SOLICITAÇÃO DE TRANSFERENCIA
@@ -184,9 +205,6 @@ class TransactionController extends Controller
         if(! $this->checkExternalAuthorization()){
             $this->setError('Não foi possivel completar sua solicitação, não autorizado');
             return false;
-            $responseArr['message'] = 'Não foi possivel completar sua solicitação, não autorizado';
-            $responseArr['status'] = 0;
-            return response()->json($responseArr);
         }
 
         //Atualizar Wallet
@@ -199,7 +217,7 @@ class TransactionController extends Controller
 
         //para a notificação ser transparente podemos:
         //enviar a notificação para uma FILA
-        //enviar a responde para a view que se encarrega de chamar um método de notificacao
+        //enviar a responde para a view que se encarrega de chamar um método de notificacao (escolhi essa)
 
         return $transaction;
     }
